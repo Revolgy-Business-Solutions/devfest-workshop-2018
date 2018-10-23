@@ -1,7 +1,7 @@
 
-var mysql= require("mysql");
+var mysql = require('mysql');
 
-cons config = {
+const config = {
   host: 'localhost',
   user: 'demo',
   password: 'secretPassword',
