@@ -6,7 +6,7 @@ const json = {
 };
 
 request.post({
-    url: 'http://localhost:3002/users',
+    url: 'http://localhost:3000/users',
     body: json,
     json: true,
 }, function (error, response, body) {

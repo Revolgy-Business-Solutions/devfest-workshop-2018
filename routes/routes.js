@@ -9,6 +9,19 @@ const router = app => {
             message: 'Welcome to the Node.js Express REST API!'
         });
     });
+  
+    // Generate CPU load
+    app.get('/cpu', (request, response) => {
+        var now = new Date().getTime();
+        while(true) {
+          if (new Date().getTime() > now +20)
+            break;
+        }
+        response.send({
+            message: 'Yay, I stressed!'
+        });
+
+    });
 
     // Display all users
     app.get('/users', (request, response) => {

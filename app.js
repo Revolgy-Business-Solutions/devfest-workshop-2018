@@ -1,6 +1,6 @@
 // Require packages and set the port
 const express = require('express');
-const port = 3002;
+const port = 3000;
 const bodyParser = require('body-parser');
 const routes = require('./routes/routes')
 const app = express();
