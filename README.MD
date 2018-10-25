@@ -5,8 +5,8 @@
 
 In this course we will use following cli tools:
 
-gcloud
-kubectl
+- gcloud
+- kubectl
 
 ### gcloud
 
@@ -26,7 +26,7 @@ gcloud components install kubectl
 
 ## GCP Project preparation
 
-In this workshop we will be using Google Cloud Platform environment. It ofers managed kubernetes environment, Google Kubernetes Engine as well as other services that will be used within this workshop such as managed MySQL database, container image repository and alternatively CI/CD tools.
+In this workshop we will be using Google Cloud Platform environment. It offers managed kubernetes environment, Google Kubernetes Engine as well as other services that will be used within this workshop such as managed MySQL database, container image repository and alternatively CI/CD tools.
 
 ### Creating Cluster
 
@@ -34,18 +34,18 @@ In GCP console: https://console.cloud.google.com/kubernetes/ we will create new 
 
 Setting will be guided in workshop, here are the main setting changes:
 
-Location type: Zonal
-Zone: europe-west1-c
-Master version: 1.10.6-gke.6
+- Location type: Zonal
+- Zone: europe-west1-c
+- Master version: 1.10.6-gke.6
 
-NodePool:
-size: 2
-Boot disk size: 40Gb
-Enable preemptible nodes
-Disable auto-upgrade
+-NodePool:
+  - size: 2
+  - Boot disk size: 40Gb
+  - Enable preemptible nodes
+  - Disable auto-upgrade
 
-Scopes:
-CloudSQL - enabled
+- Scopes:
+  - CloudSQL - enabled
 
 ### Prepare CI/CD (Optional, may be not part of kubernetes workshop)
 
@@ -69,7 +69,7 @@ As of now, trigger creation have 3 steps, i will list here values we want to fil
 - Cloud Source Repository
 
 2 - Repository
-Select your created 
+- Select your created Source Repository
 
 3 - Trigger settings
 - Name - Anything descriptive (optional)
@@ -93,20 +93,36 @@ Confirm configuration and wait a few minutes for database to create.
 
 #### CloudSQL setup
 
+Users and access will be configure later in the workshop. Now we will just prepare database, tables and some example data. In database details in GCP console - SQL we have an option to `Connect using Cloud Shell`. After initiation of virtual console we are presented with prearanged gcloud command that will connect us directly to the datase. We will need to enter root password for this connection.
+
+Once we are in the database. we will create our test database, table and insert some test data.
+
+```
+CREATE DATABASE demoapp CHARACTER SET utf8 COLLATE utf8_general_ci;
+```
+
+```
+CREATE TABLE `users` (
+  `id`       int(11)     unsigned NOT NULL AUTO_INCREMENT,
+  `name`     varchar(30) DEFAULT '',
+  `email`    varchar(50) DEFAULT '',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+```
+
+```
+INSERT INTO users (name, email) 
+     VALUES ('Earl Grey', 'earl@grey.com'), 
+            ('Lapsang Souchong',  'lapsang@souchong.com');
+```
+
 #### Allow CloudSQL Admin API
+
+Later on we will use special proxy that will allow us to securely connect to the database. For this to work we need to enable `CloudSQL Admin API` on GCP. In the `APIs & Services` we have option to `Enable apis and services`. If we search for `SQL` in the opened API Library we will see our `Cloud SQL Admin API` which we need to select and then `ENABLE`.
 
 #### create service account
 
 For authentication to the database we will need service account. You can create one in "IAM & admin" section and "Service accounts" subsection. Here we will `Create service account`. We name him i.e. sqlproxy and on the permissions step we will select `Cloud SQL Admin`. On the last step we will generate json config file which we save for later.
-
-#### Update firewall rules
-
-all targets
-
-35.191.0.0/16
-130.211.0.0/22
-
-port: 30000-32767
 
 ## Docker image preparation
 
@@ -260,8 +276,25 @@ spec:
     servicePort: 80
 ```
 
+#### Update firewall rules
+
+For ingress to work correctly, we need to create a firewall rule that will allow traffic from Google subnets to our pods. The reason for that is that from these subnets are comming health check request that mark Loadbalancers backend on GCP layer healthy or not. If health check do not reach our services, ingress will not route traffic to them.
+
+Firewall rule configurationi (besides default values):
+
+- Targets: All instances in the network
+
+- Source IP ranges:
+  - 35.191.0.0/16
+  - 130.211.0.0/22
+
+- ports: tcp: 30000-32767
+
 #### Deployment health cycle - Health and Readiness probess
 
+Deployment itself keeps desired replicas deployed but it can only see if container is running or not which is based on if core continer process is running or not. What it can't do though is recognize where application is healthy, working properly, isn't overloaded etc. For this purpose we have two probes that we can utilize.
+
+```
     readinessProbe:
       tcpSocket:
         port: 3000
@@ -273,8 +306,25 @@ spec:
         port: 3000
       initialDelaySeconds: 15
       periodSeconds: 20
+```
 
+We can redeploy our application with:
+
+```
 kubectl apply -f app.yaml
+```
+
+Kuard demo:
+
+```
+k apply -f kubernetes/kuard.yaml
+```
+
+For testing or debugging purposes, we dont have to creating loadbalancers and ingresses for every deployment we run. Kubectl has ability to forward ports directly from pods to local network.
+
+```
+kubectl port-forward kuard 8080:8080 &
+```
 
 #### Deployment rollout strategy
 
@@ -404,4 +454,20 @@ volumes:
   - name: cloudsql-instance-credentials
     secret:
       secretName: cloudsql-instance-credentials
+```
+
+#### Adding secrets as container environment variables
+
+```
+env:
+- name: DB_USER
+  valueFrom:
+    secretKeyRef:
+      name: cloudsql-db-credentials
+      key: username
+- name: DB_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: cloudsql-db-credentials
+      key: password
 ```
