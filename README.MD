@@ -151,7 +151,7 @@ You have to tag builded image as `eu.gcr.io/_GCP_PROJECT_ID/SOME_FOLDER/APP_NAME
 In my case docker build will look like this:
 
 ```
-docker build -t eu.gcr.io/xxx/devfest-workshop/app:1
+docker build -t eu.gcr.io/xxx/devfest-workshop/app:1 .
 ```
 
 Next we can push this image to Container Registry on our Google Cloud Project
